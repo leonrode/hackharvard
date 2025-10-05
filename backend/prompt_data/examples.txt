@@ -1,0 +1,86 @@
+Topic: diffusion-equation
+- Diffusion equation as a simple model for how a heated system evolves over time
+- Green's functions and the heat kernel
+- Structure of the heat equation as a parabolic PDE
+- Generalizes to multiple dimensions
+
+Topic: dispersion-of-the-Gaussian-on-an-infinite-line
+- Consider taking an approximation of a function using Green's functions scaled by the function value
+- Don't consider boundary conditions as the mathematical ideal case
+
+Topic: fourier-series-heat-equation
+- Fourier series provide a nicer method for solving the heat equation
+- Perform separation of variables
+- Introduce exponential guesses for one part of separated equation
+- Introduce sinusoid guesses for another part of separated equation
+- Phrase the whole solution
+
+Topic: tcp-congestion-control
+- The fundamental problem of preventing network collapse from excessive traffic
+- Use of AIMD (Additive Increase, Multiplicative Decrease) as the core algorithm
+- The Slow Start phase for initially probing available network capacity
+- The Congestion Avoidance phase to gently increase the sending rate after Slow Start
+- Fast Retransmit and Fast Recovery for handling packet loss without waiting for a full timeout
+
+Topic: central-dogma-molecular-biology
+- The core principle describing the flow of genetic information in biological systems
+- Replication: The process of copying a cell's DNA
+- Transcription: Creating a messenger RNA (mRNA) copy from a DNA template
+- Translation: Synthesizing a protein from the mRNA template at the ribosome
+- Notable exceptions like reverse transcription in retroviruses
+
+Topic: supply-and-demand
+- A foundational economic model for determining the price of a good in a market
+- The Law of Demand: As price increases, quantity demanded decreases
+- The Law of Supply: As price increases, quantity supplied increases
+- Market Equilibrium: The price at which the quantity supplied equals the quantity demanded
+- Factors that cause shifts in the supply or dmand curves, such as changes in technology or consumer preferences
+
+Topic: fall-of-the-roman-empire
+- A gradual, complex process of decline rather than a single event
+- Internal pressures: Political instability, civil wars, and economic decay
+- External pressures: Constant invasions and migrations by so-called "barbarian" tribes
+- The formal division of the empire into Eastern and Western halves
+- Over-reliance on non-Roman mercenaries, leading to a decline in military loyalty and effectiveness
+
+Topic: heros-journey
+- A common narrative archetype, or monomyth, identified in global storytelling
+- The Call to Adventure: The hero receives a challenge that takes them from their ordinary world
+- Crossing the Threshold: The hero commits to the quest and enters an unknown world
+- The Ordeal: The central crisis where the hero faces their greatest fear and "dies" to be reborn
+- The Return with the Elixir: The hero comes back to their ordinary world with a treasure, wisdom, or love to share
+
+Topic: general-relativity
+- Albert Einstein's geometric theory of gravitation
+- The Equivalence Principle: The effects of gravity are indistinguishable from the effects of acceleration
+- Spacetime as a single, four-dimensional manifold
+- Mass and energy curve or warp the fabric of spacetime
+- Objects follow the straightest possible path, called a geodesic, through this curved spacetime
+
+Topic: transformer-architecture
+- A deep learning model architecture that excels at handling sequential data, like natural language
+- Avoids recurrence and instead relies on a self-attention mechanism
+- Positional encodings are added to give the model information about word order
+- Multi-head attention allows the model to jointly attend to information from different representation subspaces
+- The core structure often consists of an encoder and a decoder stack
+
+Topic: diatonic-harmony
+- The system of musical harmony based on the notes of the major and minor scales
+- Building triads (three-note chords) on each of the seven scale degrees
+- Functional Harmony: The concept that chords have specific roles (Tonic, Subdominant, Dominant)
+- Cadences: Harmonic formulas that create a sense of resolution or pause
+- Chord progressions as the basis for creating harmonic movement and interest
+
+Topic: maillard-reaction
+- A chemical reaction responsible for the browning and flavor of many cooked foods
+- Occurs between amino acids and reducing sugars under the application of heat
+- Creates a complex mixture of hundreds of different aroma and flavor compounds
+- Distinct from caramelization, which involves only the pyrolysis of sugars
+- Examples include seared steak, toasted bread, and roasted coffee beans
+
+Topic: acid-base-titration
+- A laboratory method of quantitative chemical analysis to determine concentration
+- A solution of known concentration (titrant) is used to neutralize a solution of unknown concentration (analyte)
+- The Equivalence Point: The point at which the moles of acid equal the moles of base
+- Use of a pH indicator or pH meter to identify the endpoint of the reaction
+- Plotting a titration curve (pH vs. volume of titrant added) to analyze the reaction profile

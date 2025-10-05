@@ -1,4 +1,5 @@
 import asyncio
+
 import websockets
 import json
 import os
@@ -7,10 +8,10 @@ import queue
 import uuid
 from datetime import datetime
 import sys
+from audio_streams import WebSocketAudioStream
 import base64
 import struct
 import signal
-import pyaudio
 
 # Add parent directory to path to import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,18 +32,45 @@ class WebSocketServer:
         self.strip_headers = True
         self.raw_file_header_size = 44
         self.audio_queue = queue.Queue()
+
+        self.audio_stream = WebSocketAudioStream(None)
         
         # Service instances
-        self.transcriber = Transcriber()
-        self.recommender = Recommender()
         self.topic_manager = TopicManager()
+        self.transcriber = Transcriber(self.audio_stream, self.topic_manager)
+        self.recommender = Recommender()
         
         # Server state
         self.server = None
         self.active_connections = set()
         self.shutdown_event = asyncio.Event()
+
+    async def start_server(self):
+        """Start the WebSocket server"""
+        print(f'WebSocket server running on ws://{self.host}:{self.port}')
+        print(f'Server is binding to all interfaces (0.0.0.0)')
         
+        # Start the WebSocket server
+        self.server = await websockets.serve(
+            self.handle_client, 
+            self.host, 
+            self.port,
+            ping_interval=20,
+            ping_timeout=10,
+            close_timeout=10
+        )
         
+        print('Server started successfully. Waiting for connections...')
+        print('Press Ctrl+C to gracefully shutdown the server')
+        
+        try:
+            # Keep the server running until shutdown event
+            await self.shutdown_event.wait()
+        except KeyboardInterrupt:
+            print("\n⚠️ Keyboard interrupt received")
+        finally:
+            await self.close_websocket_server()
+
 
     def queue_audio_data(self, audio_data):
         """Queue audio data for playback"""
@@ -54,125 +82,19 @@ class WebSocketServer:
         # Process audio directly with transcriber
         self.transcriber.transcribe_audio_queue(self.audio_queue)
 
-    
-    
-
-    def strip_audio_header(self, audio_data):
-        """Strip common audio file headers from raw audio data"""
-        if len(audio_data) < 44:  # Minimum size for any meaningful audio data
-            return audio_data
-        
-        # Check for WAV header (starts with "RIFF")
-        if audio_data[:4] == b'RIFF':
-            # WAV header is typically 44 bytes, but let's find the actual data start
-            # Look for "data" chunk marker
-            data_start = audio_data.find(b'data')
-            if data_start != -1:
-                # Skip "data" marker (4 bytes) and size field (4 bytes)
-                return audio_data[data_start + 8:]
-            else:
-                # Fallback: assume 44-byte header
-                return audio_data[44:]
-        
-        # Check for other common headers
-        elif audio_data[:4] == b'OggS':  # OGG header
-            # OGG is more complex, for now just skip first 100 bytes as approximation
-            return audio_data[100:]
-        
-        elif audio_data[:3] == b'ID3':  # MP3 with ID3 tag
-            # ID3 tag size is in bytes 6-9 (big-endian)
-            if len(audio_data) >= 10:
-                tag_size = struct.unpack('>I', b'\x00' + audio_data[6:9])[0]
-                return audio_data[10 + tag_size:]
-            else:
-                return audio_data[10:]
-        
-        # Check for .raw file patterns (common raw audio formats)
-        elif self.is_raw_audio_format(audio_data):
-            print("Detected raw audio format")
-            # Common .raw file headers are often 44 bytes (WAV-like) or 0 bytes
-            # Try different header sizes
-            for header_size in [44, 16, 8]:
-                if len(audio_data) > header_size:
-                    test_data = audio_data[header_size:]
-                    if self.looks_like_audio_data(test_data):
-                        return test_data
-            # If no header size works, return as-is
-            return audio_data
-        
-        # Check for raw PCM data patterns
-        # If it looks like raw 16-bit PCM (no obvious header), return as-is
-        else:
-            # Check if the data looks like raw PCM by examining byte patterns
-            # Raw PCM typically has more variation in byte values
-            sample_bytes = audio_data[:min(1024, len(audio_data))]
-            byte_variance = len(set(sample_bytes))
-            
-            if byte_variance > 50:  # High variance suggests raw audio data
-                print("🎵 Detected raw PCM data, no header stripping needed")
-                return audio_data
-            else:
-                print("🎵 Unknown format, attempting to strip first 44 bytes")
-                return audio_data[44:]
-
-    def is_raw_audio_format(self, audio_data):
-        """Check if this looks like a .raw audio file"""
-        if len(audio_data) < 16:
-            return False
-        
-        # .raw files often have specific patterns or are just raw PCM
-        # Check for common .raw file characteristics
-        return True  # For now, assume it could be .raw if we get here
-
-    def looks_like_audio_data(self, data):
-        """Check if data looks like valid audio samples"""
-        if len(data) < 100:
-            return False
-        
-        # Check for audio-like characteristics:
-        # 1. Reasonable byte variance (not all zeros or all same value)
-        # 2. Some structure that suggests audio samples
-        sample = data[:min(1000, len(data))]
-        unique_bytes = len(set(sample))
-        
-        # Should have some variation but not be completely random
-        return 10 < unique_bytes < 200
-
-    def detect_audio_format(self, audio_data):
-        """Detect the audio format from the data"""
-        if len(audio_data) < 4:
-            return "unknown"
-        
-        if audio_data[:4] == b'RIFF':
-            return "wav"
-        elif audio_data[:4] == b'OggS':
-            return "ogg"
-        elif audio_data[:3] == b'ID3':
-            return "mp3"
-        elif audio_data[:4] == b'fLaC':
-            return "flac"
-        else:
-            return "raw_pcm"
-
     async def handle_client(self, websocket, path=None):
-        """Handle new WebSocket client connection"""
         client_address = websocket.remote_address
         client_id = str(uuid.uuid4())
-        client_type = 'unknown'
-        
-        # Add to active connections
-        self.active_connections.add(websocket)
+
         
         print(f"New connection attempt from {client_address}")
-        print(f"Client ID: {client_id}")
-        print(f"Active connections: {len(self.active_connections)}")
-        
+
+
         try:
             # Send welcome message
             welcome_message = {
                 'type': 'welcome',
                 'message': 'Connected to real-time recommendations server',
-                'client_id': client_id,
                 'timestamp': int(time.time() * 1000)
             }
             await websocket.send(json.dumps(welcome_message))
@@ -230,14 +152,9 @@ class WebSocketServer:
         
         if message_type == 'register_client':
             await self.handle_register_client(websocket, client_id, data)
-        elif message_type == 'audio_chunk':
-            await self.handle_audio_chunk(websocket, client_id, data)
+
         elif message_type == 'get_recommendations':
             await self.handle_get_recommendations(websocket, client_id, data)
-        elif message_type == 'clear_audio_chunks':
-            await self.handle_clear_audio_chunks(websocket, client_id, data)
-        elif message_type == 'toggle_audio_playback':
-            await self.handle_toggle_audio_playback(websocket, client_id, data)
         else:
             await self.send_error(websocket, f'Unknown message type: {message_type}')
 
@@ -300,81 +217,17 @@ class WebSocketServer:
                 }
             })
         else:
-            self.phone_socket = client_id
-            print(f"Phone client connected: {self.phone_socket}")
             await self.send_message(websocket, {
                 'type': 'connected',
-                'client_id': self.phone_socket,
+                'client_id': client_id,
                 'client_type': 'phone',
                 'message': 'Phone client connected successfully'
             })
 
-    async def handle_audio_chunk(self, websocket, client_id, data):
-        """Handle audio data from phone client"""
-        # Only phone client should send audio
-        if client_id != self.phone_socket:
-            await self.send_error(websocket, 'Only phone client can send audio')
-            return
-        
-        try:
-            # Convert audio data back to bytes - handle different formats
-            audio_data = data.get('data')
-            
-            if isinstance(audio_data, list):
-                # Data is a list of integers (raw audio bytes)
-                try:
-                    audio_buffer = bytes(audio_data)
 
-                except (ValueError, OverflowError) as e:
+            self.audio_stream.start(websocket)
+            self.transcriber.start()
 
-                    await self.send_error(websocket, f'Invalid audio data values: {str(e)}')
-                    return
-
-            elif isinstance(audio_data, str):
-                # Data is a base64 encoded string
-                try:
-                    audio_buffer = base64.b64decode(audio_data)
-
-                except Exception as e:
-
-                    await self.send_error(websocket, f'Invalid base64 data: {str(e)}')
-                    return
-
-
-            else:
-                print(f"Unexpected data type: {type(audio_data)}")
-                await self.send_error(websocket, 'Invalid audio data format')
-                return
-
-
-
-            self.queue_audio_data(audio_buffer)
-
-            # Detect audio format
-            audio_format = self.detect_audio_format(audio_buffer)
-            
-            
-            # Send acknowledgment to phone client
-            await self.send_message(websocket, {
-                'type': 'audio_ack',
-                'chunk_id': data.get('timestamp'),
-                'status': 'received',
-                'audio_format': audio_format,
-                'chunk_size': len(audio_buffer),
-                'timestamp': int(time.time() * 1000)
-            })
-            
-            # Forward audio data to site client if connected
-            if self.site_socket:
-                # Note: In raw WebSocket, we'd need to store the websocket object
-                # For now, we'll just log that we would forward it
-                print(f"Would forward audio data to site client: {self.site_socket}")
-            
-            
-        except Exception as e:
-            print(f"Error processing audio data: {e}")
-            print(f"Data sample: {data.get('data', [])[:10] if hasattr(data.get('data', []), '__getitem__') else data.get('data', 'No data')}")
-            await self.send_error(websocket, f'Error processing audio: {str(e)}')
 
     async def handle_get_recommendations(self, websocket, client_id, data):
         """Handle recommendation requests from site client"""
@@ -398,35 +251,6 @@ class WebSocketServer:
         except Exception as e:
             print(f"Error generating recommendations: {e}")
             await self.send_error(websocket, f'Error generating recommendations: {str(e)}')
-
-    async def handle_clear_audio_chunks(self, websocket, client_id, data):
-        """Handle clearing audio chunks list"""
-        # Only phone client should clear audio chunks
-        if client_id != self.phone_socket:
-            await self.send_error(websocket, 'Only phone client can clear audio chunks')
-            return
-        
-        chunks_cleared = len(self.audio_chunks)
-        self.audio_chunks.clear()
-        
-        await self.send_message(websocket, {
-            'type': 'audio_chunks_cleared',
-            'chunks_cleared': chunks_cleared,
-            'timestamp': int(time.time() * 1000)
-        })
-        
-        print(f"Cleared {chunks_cleared} audio chunks")
-
-    async def handle_toggle_audio_playback(self, websocket, client_id, data):
-        """Handle audio playback toggle requests"""
-        enabled = data.get('enabled')
-        current_status = self.toggle_audio_playback(enabled)
-        
-        await self.send_message(websocket, {
-            'type': 'audio_playback_status',
-            'enabled': current_status,
-            'timestamp': int(time.time() * 1000)
-        })
 
 
     async def send_message(self, websocket, message):
@@ -505,33 +329,7 @@ class WebSocketServer:
         
         print("✅ Graceful shutdown completed")
 
-    async def start_server(self):
-        """Start the WebSocket server"""
-        print(f'WebSocket server running on ws://{self.host}:{self.port}')
-        print(f'Accessible from network at: ws://0.0.0.0:{self.port}')
-        print(f'Server is binding to all interfaces (0.0.0.0)')
-        
-        # Start the WebSocket server
-        self.server = await websockets.serve(
-            self.handle_client, 
-            self.host, 
-            self.port,
-            ping_interval=20,
-            ping_timeout=10,
-            close_timeout=10
-        )
-        
-        print('Server started successfully. Waiting for connections...')
-        print('🎵 Audio processing is ready')
-        print('Press Ctrl+C to gracefully shutdown the server')
-        
-        try:
-            # Keep the server running until shutdown event
-            await self.shutdown_event.wait()
-        except KeyboardInterrupt:
-            print("\n⚠️ Keyboard interrupt received")
-        finally:
-            await self.close_websocket_server()
+    
 
 def main():
     """Main function to start the WebSocket server"""
