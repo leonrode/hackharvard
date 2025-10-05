@@ -1,19 +1,24 @@
 import "./App.css";
 import { useWsTopics } from "./useWsTopics";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, useScroll } from "framer-motion";
 
-const fixedSuggestions = [
-  "Got it, could you elaborate?",
-  "What’s the next step?",
-  "Can you share an example?"
-];
+
 
 export default function App() {
   let { topics, status } = useWsTopics();
 
-
   const [allTopics, setAllTopics] = useState([]);
   const [expandedItems, setExpandedItems] = useState(new Set());
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const scrollRef = useRef(null);
+  const { scrollX } = useScroll({ container: scrollRef });
+
+  // Update scroll position for calculations
+  useEffect(() => {
+    const unsubscribe = scrollX.onChange(setScrollPosition);
+    return unsubscribe;
+  }, [scrollX]);
 
   useEffect(() => {
 
@@ -51,9 +56,32 @@ export default function App() {
         </h2>
       </header>
 
-      <section className="hstrip" aria-label="Topics carousel">
-        {allTopics.map((t) => (
-          <article className="topic" key={t.topic_key}>
+      <section className="hstrip" aria-label="Topics carousel" ref={scrollRef}>
+        {allTopics.map((t, index) => {
+          // Calculate staggered effects based on scroll position and index
+          const waveOffset = index * 0.5;
+          const yOffset = Math.sin((scrollPosition / 200) + waveOffset) * (10 + index * 2);
+          const scaleValue = 1 + Math.sin((scrollPosition / 300) + waveOffset) * (0.02 + index * 0.005);
+          const rotateValue = Math.sin((scrollPosition / 400) + waveOffset) * (1 + index * 0.3);
+          const opacityValue = 0.9 + Math.sin((scrollPosition / 500) + waveOffset) * (0.1 + index * 0.02);
+          
+          return (
+            <motion.article 
+              className="topic" 
+              key={t.topic_key}
+              style={{
+                y: yOffset,
+                scale: scaleValue,
+                rotate: rotateValue,
+                opacity: opacityValue,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 100,
+                damping: 20,
+                delay: index * 0.1, // Stagger the initial animation
+              }}
+            >
             <input className="topic__title" defaultValue={t.topic_key.replaceAll("-", " ")} aria-label={`${t.topic_key} title`} />
             <div className="topic__box" role="region" aria-label={`${t.topic_key} list`}>
               <div className="topic__list">
@@ -63,7 +91,7 @@ export default function App() {
                   
                   return (
                     <div 
-                      key={it} 
+                      key={index} 
                       className={`topic__item ${isExpanded ? 'expanded' : ''}`}
                       onClick={() => toggleExpanded(t.topic_key, index)}
                       style={{ cursor: 'pointer' }}
@@ -93,8 +121,9 @@ export default function App() {
                 <div key={r} className="sg">{r}</div>
               ))}
             </div>
-          </article>
-        ))}
+            </motion.article>
+          );
+        })}
 
         {allTopics.length === 0 && (
           <div style={{ alignSelf: "center", opacity: 0.6 }}>No topics received yet…</div>

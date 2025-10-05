@@ -88,7 +88,7 @@ def chunk_transcript_by_topics(
     and create a new topic in the new_topic_id parameter.
 
     Note that a chunk has to be ENTIRELY unrelated to the topic in order to justify the creation of
-    a new topic. 
+    a new topic. Therefore, in general chunks in a real conversation will most likely belong to the same topic unless you hear TRANSITION WORDS like "now i want to talk about", or "let's move on to", or other transition words.
 
     IGNORE any parts of the transcript that you consider meaningless, or provide no conversational value or context, for example
     filler words like um, uh, so, etc., or any other parts of the transcript that you consider meaningless.

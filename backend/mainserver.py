@@ -82,9 +82,9 @@ class WebSocketServer:
             self.handle_client, 
             self.host, 
             self.port,
-            ping_interval=20,
-            ping_timeout=10,
-            close_timeout=10
+            ping_interval=30,
+            ping_timeout=50,
+            close_timeout=50
         )
         
         print('Server started successfully. Waiting for connections...')
@@ -176,7 +176,7 @@ class WebSocketServer:
         """Handle incoming WebSocket messages"""
         message_type = data.get('type')
 
-        print(f"Message type: {message_type}")
+
         
         if message_type == 'register_client':
             await self.handle_register_client(websocket, client_id, data)
