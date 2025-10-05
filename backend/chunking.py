@@ -56,6 +56,7 @@ def chunk_transcript_by_topics(
     existing_topics: Optional[str] = None,
     project_id: str = None,
     location: str = "us-central1",
+    previous_recommendations: Optional[str] = None,
 ) -> Dict[str, any]:
     logger.debug(f"Chunking transcript of length {len(transcript)}")
 
@@ -68,7 +69,7 @@ def chunk_transcript_by_topics(
 
     prompt = f"""
     You are a helpful assistant that identifies summary points of chunks from a transcript
-    in addition to identifying topics that the chunk belongs to.
+    in addition to identifying topics that the chunk might belong to as well as previous recommendations for how to continue the topic.
 
     Here are some examples of topics and the chunk blurbs that might belong to those topics:
     {EXAMPLES}
@@ -79,11 +80,18 @@ def chunk_transcript_by_topics(
     Here are the existing topics:
     {existing_topics}
 
-    If there are no existing topics, return None for the existing_topic_id parameter
+    Here are the previous recommendations made by the assistant for each topic:
+    {previous_recommendations}
+    
+
+    If there are no existing topics that match the chunk, return None for the existing_topic_id parameter
     and create a new topic in the new_topic_id parameter.
 
     Note that a chunk has to be ENTIRELY unrelated to the topic in order to justify the creation of
     a new topic. 
+
+    IGNORE any parts of the transcript that you consider meaningless, or provide no conversational value or context, for example
+    filler words like um, uh, so, etc., or any other parts of the transcript that you consider meaningless.
 
     Correct typos based on the context of the transcript; the transcript is bad.
     Each chunk should contain one point or idea; a chunk blurb should not involve multiple points.

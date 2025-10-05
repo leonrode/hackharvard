@@ -52,7 +52,10 @@ class WebSocketServer:
 
         recommendations = self.recommender.recommend(topics)
 
-        print(recommendations)
+
+
+        self.transcriber.previous_recommendations = recommendations
+
 
         # now i would like to send this data over the site websocket
         # Schedule the async function as a task in the current event loop

@@ -1,0 +1,20 @@
+{
+  "name": "audio-websocket-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for receiving real-time audio streams",
+  "main": "websocket-server.js",
+  "scripts": {
+    "start": "node websocket-server.js",
+    "dev": "nodemon websocket-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["websocket", "audio", "streaming", "real-time"],
+  "author": "",
+  "license": "MIT"
+}
+

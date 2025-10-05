@@ -39,13 +39,14 @@ class Transcriber:
         on_working_buffer_update: Optional[Callable[[str], None]] = None,
         on_dump: Optional[Callable[[str], None]] = None,
         on_chunks_produced: Optional[Callable[[Dict[str, str]], None]] = None,
+        previous_recommendations: Optional[Dict[str, str]] = None,
     ):
         self.topic_manager = topic_manager
         self.config = config or TranscriberConfig()
         self.on_working_buffer_update = on_working_buffer_update
         self.on_dump = on_dump
         self.on_chunks_produced = on_chunks_produced
-
+        self.previous_recommendations = previous_recommendations
         self.working_buffer: str = ""
         self.long_term_buffer: str = ""
 
@@ -100,6 +101,7 @@ class Transcriber:
                 existing_topics=existing_topics,
                 project_id=self.config.vertex_project_id,
                 location=self.config.vertex_location,
+                previous_recommendations=self.previous_recommendations,
             )
 
             logger.debug(f"Chunking result: {result}")
