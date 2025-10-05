@@ -183,6 +183,7 @@ class Transcriber:
         self,
     ) -> Generator[speech.StreamingRecognizeRequest, None, None]:
         for audio_chunk in self.audio_stream.get_chunk_generator():
+            print(f"Audio chunk: {audio_chunk}")
             if not self._is_running:
                 break
             if not isinstance(audio_chunk, bytes):
@@ -265,10 +266,12 @@ class Transcriber:
 
                 streaming_config = self._create_streaming_config()
                 audio_stream = self._audio_generator()
+
             
-        
+                print(f"Streaming config: {streaming_config}")
+                print(f"Audio stream: {audio_stream}")
                 responses = self.client.streaming_recognize(
-                    streaming_config, audio_stream
+                    config=streaming_config, requests=audio_stream
                 )
                 self._process_responses(responses)
 

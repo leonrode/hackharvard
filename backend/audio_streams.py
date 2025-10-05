@@ -28,9 +28,9 @@ class WebSocketAudioStream(AudioStream):
         self.websocket = websocket
 
 
-    async def get_chunk_generator(self) -> Generator[bytes, None, None]:
+    def get_chunk_generator(self) -> Generator[bytes, None, None]:
 
-        async for message in self.websocket:
+        for message in self.websocket:
             data = json.loads(message)
             audio_data = data.get('data')
             
@@ -41,7 +41,7 @@ class WebSocketAudioStream(AudioStream):
                     yield audio_buffer
 
                 except (ValueError, OverflowError) as e:
-                    await self.send_error(self.websocket, f'Invalid audio data values: {str(e)}')
+                    self.send_error(self.websocket, f'Invalid audio data values: {str(e)}')
                     yield None
 
             elif isinstance(audio_data, str):
@@ -51,12 +51,12 @@ class WebSocketAudioStream(AudioStream):
                     yield audio_buffer
                 except Exception as e:
 
-                    await self.send_error(self.websocket, f'Invalid base64 data: {str(e)}')
+                    self.send_error(self.websocket, f'Invalid base64 data: {str(e)}')
                     yield None
 
         else:
             print(f"Unexpected data type: {type(audio_data)}")
-            await self.send_error(self.websocket, 'Invalid audio data format')
+            self.send_error(self.websocket, 'Invalid audio data format')
             yield None
 
     def start(self, websocket=None) -> None:
