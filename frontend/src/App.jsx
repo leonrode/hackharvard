@@ -70,10 +70,7 @@ export default function App() {
               className="topic" 
               key={t.topic_key}
               style={{
-                y: yOffset,
-                scale: scaleValue,
-                rotate: rotateValue,
-                opacity: opacityValue,
+
               }}
               transition={{
                 type: "spring",

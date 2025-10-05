@@ -25,12 +25,7 @@ class Recommender:
         topic_key: the main subject of the topic
         summary: a short summary of what was discussed
         content_stack: the full transcript of the conversation related to this topic
-
-        Your task is to suggest natural and gentle ways to steer the conversation towards the overarching goal of the user. It may not always be possible to do so naturally, so do not force it.
-        The overarching goal what the user wants out of the converstation is:
-
-        "to show how skillful I am in web development."
-
+ 
         For EACH topic, generate a list of recommendations that help the speaker keep the conversation flowing naturally. 
         The recommendations should:
         Be personalized to what has already been said in the transcript.
