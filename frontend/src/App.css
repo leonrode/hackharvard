@@ -96,6 +96,13 @@ body {
   border-color: var(--accent);
 }
 
+.topic__suggestion {
+  margin: 16px 0 16px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .topic__title {
   background: transparent;
   color: var(--fg);
@@ -157,8 +164,8 @@ body {
 
 .sg {
   appearance: none;
-  border: 1px solid var(--stroke);
-  color: var(--fg);
+
+  color: #cccccc;
   border-radius: 12px;
   padding: 12px 14px;
   font-size: 14px;

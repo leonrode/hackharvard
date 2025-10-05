@@ -28,9 +28,9 @@ class WebSocketAudioStream(AudioStream):
         self.websocket = websocket
 
 
-    def get_chunk_generator(self) -> Generator[bytes, None, None]:
+    async def get_chunk_generator(self) -> Generator[bytes, None, None]:
 
-        for message in self.websocket:
+        async for message in self.websocket:
             data = json.loads(message)
             audio_data = data.get('data')
             

@@ -66,6 +66,12 @@ class TopicManager:
                 return list(self._topics[topic_id].chunk_stack)
             return []
 
+    def get_topic_from_topic_id(self, topic_id: str) -> Topic:
+        with self._lock:
+            if topic_id in self._topics:
+                return (topic_id, self._topics[topic_id])
+            return None
+
     def get_all_chunks(self) -> Dict[str, List[Chunk]]:
         with self._lock:
             return {

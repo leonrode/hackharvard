@@ -34,16 +34,40 @@ class WebSocketServer:
         self.audio_queue = queue.Queue()
 
         self.audio_stream = WebSocketAudioStream(None)
+        self.audio_websocket = None
         
         # Service instances
         self.topic_manager = TopicManager()
-        self.transcriber = Transcriber(self.audio_stream, self.topic_manager)
+        self.transcriber = Transcriber(self.topic_manager, on_working_buffer_update=lambda x: print(f"Working buffer: {x}"), on_dump=lambda x: print(f"Dumped text: {x}"), on_chunks_produced=self.on_chunk_callback)
         self.recommender = Recommender()
         
         # Server state
         self.server = None
         self.active_connections = set()
         self.shutdown_event = asyncio.Event()
+
+    def on_chunk_callback(self, chunks):
+
+        topics = [self.topic_manager.get_topic_from_topic_id(topic_id) for topic_id in chunks.keys()]
+
+        recommendations = self.recommender.recommend(topics)
+
+        print(recommendations)
+
+        # now i would like to send this data over the site websocket
+        # Schedule the async function as a task in the current event loop
+        asyncio.create_task(self.send_message(self.site_socket, {
+                "type": "data",
+                "data": {
+                    "topics": [{
+                        "topic_key": topic_id,
+                        "topic_summary": topic.description,
+                        "content_stack": [{"blurb": chunk.blurb, "content": chunk.content} for chunk in topic.chunk_stack],
+                        "recommendations": recommendations[topic_id],
+                    } for (topic_id, topic) in topics]
+                }
+            }))
+
 
     async def start_server(self):
         """Start the WebSocket server"""
@@ -80,7 +104,7 @@ class WebSocketServer:
         print(f"Total audio queue size: {self.audio_queue.qsize()}")
         
         # Process audio directly with transcriber
-        self.transcriber.transcribe_audio_queue(self.audio_queue)
+        self.transcriber._transcription_loop(self.audio_queue.get())
 
     async def handle_client(self, websocket, path=None):
         client_address = websocket.remote_address
@@ -88,7 +112,6 @@ class WebSocketServer:
 
         
         print(f"New connection attempt from {client_address}")
-
 
         try:
             # Send welcome message
@@ -149,10 +172,14 @@ class WebSocketServer:
     async def handle_message(self, websocket, client_id, data):
         """Handle incoming WebSocket messages"""
         message_type = data.get('type')
+
+        print(f"Message type: {message_type}")
         
         if message_type == 'register_client':
             await self.handle_register_client(websocket, client_id, data)
 
+        elif message_type == 'audio_chunk':
+            await self.handle_audio_chunk(websocket, client_id, data)
         elif message_type == 'get_recommendations':
             await self.handle_get_recommendations(websocket, client_id, data)
         else:
@@ -166,67 +193,25 @@ class WebSocketServer:
         # Check if we can accept this connection
 
         if client_type == 'site':
-            self.site_socket = client_id
+            self.site_socket = websocket
             print(f"Site client connected: {self.site_socket}")
             await self.send_message(websocket, {
                 'type': 'connected',
-                'client_id': self.site_socket,
                 'client_type': 'site',
                 'message': 'Site client connected successfully'
             })
 
-            await self.send_message(websocket, {
-                "type": "data",
-                "client_id": self.site_socket,
-                "client_type": "site",
-                "data": {
-                    "topics": [{
-                        "topic_key": "topic_key",
-                        "topic_summary": "topic_summary",
-                        "content_stack": ["content_1", "content_2", "content_3"],
-                        "recommendations": ["recommendation_1", "recommendation_2", "recommendation_3"],
-                    },{
-                        "topic_key": "topic_key",
-                        "topic_summary": "topic_summary",
-                        "content_stack": ["content_1", "content_2", "content_3"],
-                        "recommendations": ["recommendation_1", "recommendation_2", "recommendation_3"],
-                    },{
-                        "topic_key": "topic_key",
-                        "topic_summary": "topic_summary",
-                        "content_stack": ["content_1", "content_2", "content_3"],
-                        "recommendations": ["recommendation_1", "recommendation_2", "recommendation_3"],
-                    },
-                    {
-                        "topic_key": "topic_key",
-                        "topic_summary": "topic_summary",
-                        "content_stack": ["content_1", "content_2", "content_3", "content_4", "content_5", "content_6", "content_7", "content_8", "content_9", "content_10","content_11", "content_12", "content_13", "content_14", "content_15", "content_16", "content_17", "content_18", "content_19", "content_20"],
-                        "recommendations": ["recommendation_1", "recommendation_2", "recommendation_3"],
-                    },
-                    {
-                        "topic_key": "topic_key",
-                        "topic_summary": "topic_summary",
-                        "content_stack": ["content_1", "content_2", "content_3"],
-                        "recommendations": ["recommendation_1", "recommendation_2", "recommendation_3"],
-                    },
-                    {
-                        "topic_key": "topic_key",
-                        "topic_summary": "topic_summary",
-                        "content_stack": ["content_1", "content_2", "content_3"],
-                        "recommendations": ["recommendation_1", "recommendation_2", "recommendation_3"],
-                    },]
-                }
-            })
+            
         else:
             await self.send_message(websocket, {
                 'type': 'connected',
-                'client_id': client_id,
                 'client_type': 'phone',
                 'message': 'Phone client connected successfully'
             })
 
+            self.audio_websocket = websocket
 
-            self.audio_stream.start(websocket)
-            self.transcriber.start()
+
 
 
     async def handle_get_recommendations(self, websocket, client_id, data):
@@ -252,6 +237,21 @@ class WebSocketServer:
             print(f"Error generating recommendations: {e}")
             await self.send_error(websocket, f'Error generating recommendations: {str(e)}')
 
+    async def handle_audio_chunk(self, websocket, client_id, data):
+        """Handle audio chunk messages from phone client"""
+
+
+        d = base64.b64decode(data["data"])
+
+
+
+        self.transcriber._transcription_loop(d)
+
+        await self.send_message(websocket, {
+            'type': 'audio_chunk_received',
+            'message': 'Audio chunk received successfully',
+            'timestamp': int(time.time() * 1000)
+        })
 
     async def send_message(self, websocket, message):
         """Send a message to the WebSocket client"""

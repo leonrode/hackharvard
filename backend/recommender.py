@@ -1,6 +1,7 @@
 import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, GenerationConfig
 from typing import List
+import json
 
 from time import time
 
@@ -35,8 +36,7 @@ class Recommender:
         Return results as JSON with the format:
 
         {{
-        "topic_id": string,
-        "recommendations": [string, string, ...]
+            "topic_id": [string, string, ...] <recommendations for this particular topic_id>
         }}
         
         Here are the topics:
@@ -44,6 +44,11 @@ class Recommender:
 
         response = self.model.generate_content(prompt)
         response_text = response.text.strip()
+
+        # parse the ```json `
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+            return json.loads(response_text)
         return response_text
 
 
