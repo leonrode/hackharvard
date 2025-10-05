@@ -265,7 +265,8 @@ class Transcriber:
 
                 streaming_config = self._create_streaming_config()
                 audio_stream = self._audio_generator()
-                print(f"Audio_stream: {list(audio_stream)}")
+            
+        
                 responses = self.client.streaming_recognize(
                     streaming_config, audio_stream
                 )
