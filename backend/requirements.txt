@@ -2,6 +2,7 @@ aiohappyeyeballs==2.6.1
 aiohttp==3.12.15
 aiosignal==1.4.0
 annotated-types==0.7.0
+asciimatics==1.15.0
 anyio==4.11.0
 attrs==25.3.0
 cachetools==6.2.0
